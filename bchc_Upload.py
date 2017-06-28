@@ -12,13 +12,6 @@ pd.set_option('display.width', 150)
             Combines Bluegrass ARHCA worksheets into a single dataframe consisting of
             REDcap-relevant data, reformatted acc. to REDCap standards. 
             **Upload via REDCap API or manual .csv import**
-            
-  :notes:   Check the excel dataset for duplicate A#s being assigned to different patients. 
-            This occurs from time to time when, for example, two patients are meant to be
-            represented by A#s within one digit of each other (such as Axxx-xxx-056 and -057), 
-            yet are erroneously assigned the same exact number. In this instance, you should 
-            check if they have an existing record on REDCap to potentially verify their 
-            correct A#. Otherwise, contact the Refugee Health Program Coordinator. 
 """
 #%% - Read excel file into the program 
 XL_FILE = pd.ExcelFile('')   # insert your file path here
@@ -47,6 +40,7 @@ DF_A.rename(columns={'Patient Name': 'name', 'Date of Birth': 'date_of_birth', \
 DF_A.clinic = 'bchc'
 DF_A.zip_code = DF_A.zip_code.astype(str)
 DF_A.zip_code = DF_A.zip_code.str[:5]
+DF_A.drop(['Age'], inplace=True, axis=1)     # autocalculated field; unnecessary
 DF_A['Patient #'].drop_duplicates()
 DF_A = DF_A.set_index('Patient #', drop=True)
 
@@ -103,6 +97,7 @@ DF_VITALS = DF_E.groupby(DF_E['Patient #']).first()
 DF_VITALS.rename(columns={'Height': 'vsd1_height', 'Weight': 'vsd1_weight'}, inplace=True)
 DF_VITALS.vsd1_sys_bp, DF_VITALS.vsd1_dia_bp = zip(*DF_VITALS.BP.map(lambda x: x.split('/')))
 DF_VITALS.drop(['BP'], inplace=True, axis=1)
+DF_VITALS.drop(['BMI'], inplace=True, axis=1)     # autocalculated field; unnecessary
 
 #%% - height and weight conversion
 DF_VITALS.vsd1_height = DF_VITALS.vsd1_height * 2.54
@@ -309,6 +304,9 @@ if 'nw_sexually_act' in DF_MEDCIN:
     DF_MEDCIN.nw_sexually_act.loc[DF_MEDCIN.nw_sexually_act == 'NN'] = 0
     DF_MEDCIN.nw_sexually_act.loc[DF_MEDCIN.nw_sexually_act == 'Y'] = 1
     DF_MEDCIN.nw_sexually_act.loc[DF_MEDCIN.nw_sexually_act == 'YY'] = 1
+                                 
+if 'nw_ethoh_yn' in DF_MEDCIN:
+    DF_MEDCIN.nw_ethoh_yn.loc[DF_MEDCIN.nw_ethoh_yn == 'NY'] = ''
 
 #%% - Load the Orders tab, drop unecessary fields, filter out irrelevant data, remove duplicates
 DF_D = XL_FILE.parse(sheetname=4)
@@ -354,7 +352,7 @@ DF_ORD1.drop(['HEPATITIS B SURFACE ANTIGEN (HBsAG)'], inplace=True, axis=1)
 DF_ORD1.rename(columns={'CBC': 'lab_cbc_scrnd', 'CMP': 'alr_cmp_scrnd', 'LIPID PANEL': 'lab_hdl_tstd', \
 'Ova and Parasites, Stool Conc/Perm Smear, 2 spec': 'ips_scrnd', 'TB AG RESPONSE T-CELL SUSP': 'lab_tb_test_type', \
 'URINALYSIS, AUTO, W/O SCOPE': 'lab_ua_scrnd', 'URINE PREGNANCY TEST': 'lab_pregnant_scrn', \
-'VISUAL ACUITY SCREEN': 'vsd1_vsn_scrnd'}, inplace=True)
+'VISUAL ACUITY SCREEN': 'vsd1_vsn_scrnd', 'SYPHILIS TEST, NON-TREP, QUALITATIVE': 'lab_syphilis_scrnd'}, inplace=True)
 
 # - To account for unnecessary CAPS LOCKing of the ips screening field
 if 'OVA AND PARASITES, STOOL CONC/PERM SMEAR, 2 SPEC' in DF_ORD1:
@@ -365,6 +363,9 @@ if 'lab_tb_test_type' in DF_ORD1:
     DF_ORD1.lab_tb_test_type.loc[DF_ORD1.lab_tb_test_type == 'TSPOT'] = 1
     DF_ORD1.lab_tb_test_type.loc[DF_ORD1.lab_tb_test_type == 'TST'] = 2
     DF_ORD1.lab_tb_test_type.loc[DF_ORD1.lab_tb_test_type == 'Not Done'] = 3
+                               
+if 'COMPREHENSIVE METABOLIC PANEL W/O EGFR' in DF_ORD1:
+    DF_ORD1.drop(['COMPREHENSIVE METABOLIC PANEL W/O EGFR'], inplace=True, axis=1)
 
 #%% - Filter data
 DF_D = DF_D[DF_D['Result Component'].str.contains('ABSOLUTE') == False]
@@ -426,7 +427,7 @@ DF_ORD2.rename(columns={'ALBUMIN': 'alr_cmp_albumin', 'ALT': 'alr_cmp_alt', 'AST
 'MCV': 'lab_mcv', 'RDW': 'lab_rdw', 'PLATELET COUNT': 'lab_platelet', 'POTASSIUM': 'alr_cmp_k', 'RHS 15 Score': 'rhs15_score', \
 'PROTEIN, TOTAL': 'alr_cmp_ttlprotein', 'Protein': 'lab_ua_protein', 'Right Eye': 'vsd1_vision_right', \
 'SODIUM': 'alr_cmp_na', 'TRIGLYCERIDES': 'alr_cmp_tryglycde', 'URINE PREGNANCY TEST': 'lab_pregnant_rslt', \
-'WHITE BLOOD CELL COUNT': 'lab_wbc'}, inplace=True) 
+'WHITE BLOOD CELL COUNT': 'lab_wbc', 'RPR (DX) W/REFL TITER AND CONFIRMATORY TESTING': 'lab_syphilis_rslts'}, inplace=True) 
 
 #%% - Assign REDCap dropdown values based on cell contents 
 # - This section of the code can call for occasional updating due to the wide variance of columns values
@@ -443,6 +444,7 @@ DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'SMALL'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysed'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysd'] = 1
+DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'tace-lysed'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace-intact'] = 1
 DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-intact'] = 1
@@ -514,6 +516,10 @@ DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'Not Performed'] = 0
 DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'NON-REACTIVE'] = 0
 DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'REACTIVE'] = 1
 DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'BORDERLINE'] = 2
+                     
+DF_ORD2.lab_syphilis_rslts = DF_ORD2.lab_syphilis_rslts.str.strip()
+DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'NON-REACTIVE'] = 0
+DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'REACTIVE'] = 1
 
 DF_ORD2.lab_hematocrit = DF_ORD2.lab_hematocrit.str.strip()
 DF_ORD2.lab_hemoglobin = DF_ORD2.lab_hemoglobin.str.strip()
@@ -525,13 +531,9 @@ DF_ORD2.lab_hemoglobin.loc[DF_ORD2.lab_hemoglobin == 'Not Performed'] = 0
 DF_ORD2.lab_mcv.loc[DF_ORD2.lab_mcv == 'Not Performed'] = 0
 DF_ORD2.lab_platelet.loc[DF_ORD2.lab_platelet == 'Not Performed'] = 0
 DF_ORD2.lab_rdw.loc[DF_ORD2.lab_rdw == 'Not Performed'] = 0
-
 DF_ORD2.lab_wbc.loc[DF_ORD2.lab_wbc == 'TNP'] = ''
 
 DF_ORD2.vsd1_vision_both = '20/' + DF_ORD2.vsd1_vision_right
-
-if 'COMPREHENSIVE METABOLIC PANEL W/O EGFR' in DF_ORD1:
-    DF_ORD1.drop(['COMPREHENSIVE METABOLIC PANEL W/O EGFR'], inplace=True, axis=1)
 
 #%% - Merge both frames into DF_ORDERS and sort alphabetically
 DF_ORDERS = DF_ORD1.join(DF_ORD2, how='outer')
@@ -741,7 +743,14 @@ if 'PNEUMOCOCCAL VACC 13 VAL IM' in DF_IMMUN:
     except:
         DF_IMMUN.imm_pneumo = DF_IMMUN['PNEUMOCOCCAL VACC 13 VAL IM'].map(int) + DF_IMMUN.imm_pneumo
         DF_IMMUN.drop(['PNEUMOCOCCAL VACC 13 VAL IM'], inplace=True, axis=1)
-
+if 'PNEUMO VACC 23 VAL IM' in DF_IMMUN:
+    try:
+        DF_IMMUN.imm_pneumo = DF_IMMUN['PNEUMO VACC 23 VAL IM'].astype(int)
+        DF_IMMUN.drop(['PNEUMO VACC 23 VAL IM'], inplace=True, axis=1)
+    except:
+        DF_IMMUN.imm_pneumo = DF_IMMUN['PNEUMO VACC 23 VAL IM'].map(int) + DF_IMMUN.imm_pneumo
+        DF_IMMUN.drop(['PNEUMO VACC 23 VAL IM'], inplace=True, axis=1)
+        
 #%% - Polio
 if 'POLIOVIRUS (VFC), IPV, SC/IM' in DF_IMMUN:
     DF_IMMUN.imm_polio_dose1 = DF_IMMUN['POLIOVIRUS (VFC), IPV, SC/IM'].astype(int)
@@ -794,7 +803,7 @@ if 'TD VACCINE NO PRSRV >/= 7 IM' in DF_IMMUN:
         DF_IMMUN.imm_tdap = DF_IMMUN['TD VACCINE NO PRSRV >/= 7 IM'].astype(int)
         DF_IMMUN.drop(['TD VACCINE NO PRSRV >/= 7 IM'], inplace=True, axis=1)
 
-#%% - Drop any remaining irrelevant columns and sort
+#%% - Drop any remaining irrelevant columns and sort 
 if 'Immunizations Delinquent' in DF_IMMUN:
     DF_IMMUN.drop(['Immunizations Delinquent'], inplace=True, axis=1)
 if 'Immunizations Reviewed And Current' in DF_IMMUN:
@@ -804,10 +813,10 @@ if 'Immunization Record Unavailable' in DF_IMMUN:
 DF_IMMUN.sort_index(axis=1, ascending=True, inplace=True)
 
 #%% - Move everything into the RESULT dataframe
-RESULT = pd.merge(RESULT, DF_VITALS, left_index=True, right_index=True)
+RESULT = RESULT.join(DF_VITALS, how='outer')
 RESULT = RESULT.join(DF_ORDERS, how='outer')
-RESULT = RESULT.join(DF_IMMUN, how='outer')
 RESULT = RESULT.join(DF_MEDCIN, how='outer')
+RESULT = RESULT.join(DF_IMMUN, how='outer')
 
 #%% - Lab fields -- min/max value range
 RESULT.lab_platelet.loc[RESULT.lab_platelet >= 450.1] = ''
@@ -833,17 +842,13 @@ RESULT.date_of_birth = RESULT.date_of_birth.dt.date
 RESULT['dov'] = RESULT['dov'].dt.date
 RESULT.us_arrival_date = RESULT.us_arrival_date.dt.date
 
-#%% - drop records where alien_no = N/A
+#%% - drop records where alien_no or Patient # = N/A
 RESULT = RESULT[pd.notnull(RESULT['alien_no'])]
 
 #%% - reformat demographics fields
-RESULT.Age = RESULT.Age.astype(int)
-RESULT['zip_code'] = RESULT['zip_code'].astype(int) 
 RESULT.vsd1_height = RESULT.vsd1_height.round(2)
 RESULT.vsd1_weight = RESULT.vsd1_weight.round(2)
-RESULT.drop(['BMI'], inplace=True, axis=1) #autocalculated field; unnecessary
-RESULT.drop(['Age'], inplace=True, axis=1) #autocalculated field; unnecessary
-
+ 
 #%% - By the end of the file, all NA fields should be empty in order for REDcap to accept the data
 RESULT.fillna(value='', axis=1, inplace=True)
 
@@ -852,7 +857,7 @@ RESULT
 
 #%% - Perform the upload operation - Step one: create csv for use in REDCap import
 path = ('')   # insert the directory where you would like the output file to be created
-RESULT.to_csv(path+'refHealthUpload_xx-xxxx.csv', index=False, date_format='%Y-%m-%d')
+RESULT.to_csv(path+'refHealthUpload_xxxx-xx-xx.csv', index=False, date_format='%Y-%m-%d')
 
 #%% - Alternatively, perform upload in one step using REDCap API (requires error-less dataset)
 # REDCap import method will catch errors and allow you to make changes to the csv. 
