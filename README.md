@@ -12,7 +12,7 @@ The script accomplishes this by:
 
 1) reading the contents from the excel file into Python
 
-2) creating modular dataframes from each sheet using PANDAS
+2) creating modular dataframes from each sheet using pandas
 
 3) filtering each excel sheet of unnecessary data
 
@@ -22,15 +22,13 @@ The script accomplishes this by:
 
 6) uploading the full dataset to REDCap
 
-This upload is achieved using the REDCap API (a REDCap API token with import privileges is required to perform this operation) but it only works if there are zero errors in the BCHC dataset, which is rare. Alternatively, the easier upload method is to create a CSV and perform the upload operation as a manual data import. Performing a manual import allows you to view the data before uploading and check it against existing records to verify changes made. This process will let you clear up any errors within the CSV file itself. 
-
 ***********************************************************************************************************************
 
  Processing the Data
  
-Read the excel file into Pandas by inserting its file path into the parentheses of pd.ExcelFile()
+Read the excel file into the script by inserting its file path into the parentheses of pd.ExcelFile()
 
-Execute the entire script or each block one-by-one as you go along, referring to comments in the code when needed. If a block fails to execute, then the excel file is likely contains a new data type.
+Execute the script referring to comments in the code when needed. If a line fails to execute, then the excel file is likely contains a new data type.
 
 Attribute errors can occur based on unpredictable variances from the Bluegrass file. If a code block is not executing, sometimes lines of code need to be added to adjust for previously unencountered fields. The console will display any lines with errors. Adjust the code accordingly and if necessary, comment out unneeded code for preservation.
 
