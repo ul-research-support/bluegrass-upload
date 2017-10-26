@@ -12,9 +12,19 @@ pd.set_option('display.width', 150)
             Combines Bluegrass ARHCA worksheets into a single dataframe consisting of
             REDcap-relevant data, reformatted acc. to REDCap standards. 
             **Upload via REDCap API or manual .csv import**
+            
+  :notes:   Check the excel dataset for duplicate A#s being assigned to different patients. 
+            This occurs from time to time when, for example, two patients are meant to be
+            represented by A#s within one digit of each other (such as Axxx-xxx-056 and -057), 
+            yet are erroneously assigned the same exact number. In this instance, you should 
+            check if they have an existing record on REDCap to potentially verify their 
+            correct A#. Otherwise, contact the Refugee Health Program Coordinator. 
 """
 #%% - Read excel file into the program 
-XL_FILE = pd.ExcelFile('')   # insert your file path here
+dr = 'mmddyyyy'  # change this to reflect your upload directory, my standard is date of upload
+input_file_date = 'm-yyyy' # change this to reflect your input file's month/year
+input_file = 'ARHCA_'+input_file_date
+XL_FILE = pd.ExcelFile('C:\\Users\\japese01\\My Documents\\RefugeeHealth\\uploads\\uploads\\'+dr+'\\'+input_file+'.xls')
 
 #%% - Load User-Defined Fields tab to access Alien Number
 DF = XL_FILE.parse(sheetname=2)
@@ -22,7 +32,7 @@ DF = XL_FILE.parse(sheetname=2)
 #%% - Reindex the User Defined Fields tab (eliminate rows where Patient # is null)
 DF = DF.set_index('Patient #', drop=False) 
 DF = DF.loc[DF.index.to_series().dropna()]
-    
+
 #%% - Reformat the alien_no so it matches our storage format, drop unecessary fields
 DF['Value'] = DF['Value'].astype(str)
 DF['Value'] = DF['Value'].str.zfill(9)                                                  #fill with leading zeros if < 9 chars
@@ -52,44 +62,35 @@ RESULT.drop_duplicates('alien_no', inplace=True)
 
 #%% - Convert demographic values into REDcap format
 # - Tip: View the data dictionary 'Codebook' in REDcap to see correct variable names and field attributes.
-RESULT.health_insurance.loc[RESULT.health_insurance == 'WELLCARE OF KENTUCKY'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'WELLCARE MEDICAID OF KENTUCKY'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'PASSPORT HEALTH PLAN'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE KY MEDICAID'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE KY MEDICAID '] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'COVENTRY CARES OF KY'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'AETNA BETTER HEALTH OF KENTUCKY'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'ANTHEM KENTUCKY MEDICAID'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'ANTHEM BCBS MEDICAID'] = 2
+RESULT.health_insurance.loc[RESULT.health_insurance == 'WELLCARE OF KENTUCKY'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'WELLCARE MEDICAID OF KENTUCKY'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'PASSPORT HEALTH PLAN'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE KY MEDICAID'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE KY MEDICAID '] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'COVENTRY CARES OF KY'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'AETNA BETTER HEALTH OF KENTUCKY'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'ANTHEM KENTUCKY MEDICAID'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'ANTHEM BCBS MEDICAID'] = '2'
 RESULT.health_insurance.loc[RESULT.health_insurance == 'BEACON HEALTH'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE MEDICARE ADVANTAGE'] = 2
-RESULT.health_insurance.loc[RESULT.health_insurance == 'MEDICAID'] = 2
+RESULT.health_insurance.loc[RESULT.health_insurance == 'HUMANA CARESOURCE MEDICARE ADVANTAGE'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'MEDICAID'] = '2'
+RESULT.health_insurance.loc[RESULT.health_insurance == 'BLUE CROSS BLUE SHIELD'] = '2'
 
-RESULT.gender.loc[RESULT.gender == 'M'] = 1
-RESULT.gender.loc[RESULT.gender == 'F'] = 2 
+RESULT.gender.loc[RESULT.gender == 'M'] = '1'
+RESULT.gender.loc[RESULT.gender == 'F'] = '2'
 
-RESULT.marriage_status.loc[RESULT.marriage_status == 'MARRIED'] = 1
-RESULT.marriage_status.loc[RESULT.marriage_status == 'DIVORCED'] = 2 
-RESULT.marriage_status.loc[RESULT.marriage_status == 'WIDOWED'] = 3
-RESULT.marriage_status.loc[RESULT.marriage_status == 'SEPARATED'] = 4
-RESULT.marriage_status.loc[RESULT.marriage_status == 'SINGLE'] = 5
-RESULT.marriage_status.loc[RESULT.marriage_status == 'SINGLE LIVING WITH PARTNER'] = 6
+RESULT.marriage_status.loc[RESULT.marriage_status == 'MARRIED'] = '1'
+RESULT.marriage_status.loc[RESULT.marriage_status == 'DIVORCED'] = '2'
+RESULT.marriage_status.loc[RESULT.marriage_status == 'WIDOWED'] = '3'
+RESULT.marriage_status.loc[RESULT.marriage_status == 'SEPARATED'] = '4'
+RESULT.marriage_status.loc[RESULT.marriage_status == 'SINGLE'] = '5'
+RESULT.marriage_status.loc[RESULT.marriage_status == 'SINGLE LIVING WITH PARTNER'] = '6'
 RESULT.marriage_status.loc[RESULT.marriage_status == 'UNKNOWN'] = ''
 
 if 'resettlement_agency' in RESULT:
-    RESULT.resettlement_agency.loc[RESULT.resettlement_agency == 'KRM'] = 3
-
-#%% - Load Date of Visit 1 tab, reindex, map dov to the result dataframe
-DF_B = XL_FILE.parse(sheetname=1)
-DF_B.drop_duplicates('Patient #', inplace=True)
-DF_B = DF_B[pd.notnull(DF_B['Patient #'])]
-
-RESULT = DF_B.join(RESULT, on=DF_B['Patient #'], how='outer')
-RESULT = RESULT[pd.notnull(RESULT['alien_no'])]
-RESULT.rename(columns={'Date Encounter': 'dov'}, inplace=True)
-RESULT = RESULT.set_index('Patient #', drop=True)
-
-#%% - Load the Vitals tab, remove duplicate indices, rename columns, split blood pressure column into systolic & diastolic
+    RESULT.resettlement_agency.loc[RESULT.resettlement_agency == 'KRM'] = '3'
+    
+#%% - Load the Vitals tab, remove duplicate indices, rename columns, split blood pressure column into systolic & diastolic 
 DF_E = XL_FILE.parse(sheetname=6)
 DF_E.drop(['Date'], inplace=True,axis=1)
 DF_VITALS = DF_E.groupby(DF_E['Patient #']).first()
@@ -307,7 +308,7 @@ if 'nw_sexually_act' in DF_MEDCIN:
                                  
 if 'nw_ethoh_yn' in DF_MEDCIN:
     DF_MEDCIN.nw_ethoh_yn.loc[DF_MEDCIN.nw_ethoh_yn == 'NY'] = ''
-
+    
 #%% - Load the Orders tab, drop unecessary fields, filter out irrelevant data, remove duplicates
 DF_D = XL_FILE.parse(sheetname=4)
 DF_D.drop(['Order Code'], inplace=True, axis=1)
@@ -349,10 +350,10 @@ DF_ORD1.drop(['HEP B SURFACE ANTIBODY'], inplace=True, axis=1)
 DF_ORD1.drop(['HEPATITIS B CORE AB TOTAL'], inplace=True, axis=1)
 DF_ORD1.drop(['HEPATITIS B SURFACE ANTIGEN (HBsAG)'], inplace=True, axis=1)
 
-DF_ORD1.rename(columns={'CBC': 'lab_cbc_scrnd', 'CMP': 'alr_cmp_scrnd', 'LIPID PANEL': 'lab_hdl_tstd', \
+DF_ORD1.rename(columns={'CBC': 'lab_cbc_scrnd', 'CMP': 'alr_cmp_scrnd', \
 'Ova and Parasites, Stool Conc/Perm Smear, 2 spec': 'ips_scrnd', 'TB AG RESPONSE T-CELL SUSP': 'lab_tb_test_type', \
-'URINALYSIS, AUTO, W/O SCOPE': 'lab_ua_scrnd', 'URINE PREGNANCY TEST': 'lab_pregnant_scrn', \
-'VISUAL ACUITY SCREEN': 'vsd1_vsn_scrnd', 'SYPHILIS TEST, NON-TREP, QUALITATIVE': 'lab_syphilis_scrnd'}, inplace=True)
+'URINALYSIS, AUTO, W/O SCOPE': 'lab_ua_scrnd', \
+'VISUAL ACUITY SCREEN': 'vsd1_vsn_scrnd'}, inplace=True)
 
 # - To account for unnecessary CAPS LOCKing of the ips screening field
 if 'OVA AND PARASITES, STOOL CONC/PERM SMEAR, 2 SPEC' in DF_ORD1:
@@ -366,6 +367,15 @@ if 'lab_tb_test_type' in DF_ORD1:
                                
 if 'COMPREHENSIVE METABOLIC PANEL W/O EGFR' in DF_ORD1:
     DF_ORD1.drop(['COMPREHENSIVE METABOLIC PANEL W/O EGFR'], inplace=True, axis=1)
+
+if 'LIPID PANEL' in DF_ORD1:
+    DF_ORD1.drop(['LIPID PANEL'], inplace=True, axis=1)
+    
+if 'SYPHILIS TEST, NON-TREP, QUALITATIVE' in DF_ORD1:
+    DF_ORD1.drop(['SYPHILIS TEST, NON-TREP, QUALITATIVE'], inplace=True, axis=1)
+    
+if 'URINE PREGNANCY TEST' in DF_ORD1:
+    DF_ORD1.drop(['URINE PREGNANCY TEST'], inplace=True, axis=1)
 
 #%% - Filter data
 DF_D = DF_D[DF_D['Result Component'].str.contains('ABSOLUTE') == False]
@@ -428,112 +438,129 @@ DF_ORD2.rename(columns={'ALBUMIN': 'alr_cmp_albumin', 'ALT': 'alr_cmp_alt', 'AST
 'PROTEIN, TOTAL': 'alr_cmp_ttlprotein', 'Protein': 'lab_ua_protein', 'Right Eye': 'vsd1_vision_right', \
 'SODIUM': 'alr_cmp_na', 'TRIGLYCERIDES': 'alr_cmp_tryglycde', 'URINE PREGNANCY TEST': 'lab_pregnant_rslt', \
 'WHITE BLOOD CELL COUNT': 'lab_wbc', 'RPR (DX) W/REFL TITER AND CONFIRMATORY TESTING': 'lab_syphilis_rslts'}, inplace=True) 
-
+ 
 #%% - Assign REDCap dropdown values based on cell contents 
 # - This section of the code can call for occasional updating due to the wide variance of columns values
 # - seen in the Orders sheet. Bluegrass' fields often contains typos, some of which can be new to the script.
 
-DF_ORD2.lab_ua_blood = DF_ORD2.lab_ua_blood.str.strip() #strip any leading and trailing whitespace
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Not Performed'] = 0
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'negative'] = 0
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Negative'] = 0
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'NEGATIVE'] = 0
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'neg'] = 0
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'small'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'SMALL'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysed'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysd'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'tace-lysed'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace-intact'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-intact'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'TRACE-INTACT'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'moderate'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Moderate'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'large'] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood.str.contains('RBC/uL', na=False)] = 1
-DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood.str.contains('rbc/ul', na=False)] = 1
+#%%
 
-DF_ORD2.lab_ua_glucose = DF_ORD2.lab_ua_glucose.str.strip()
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Not Performed'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negative'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negatie'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negatve'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'neg'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'eneg'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Negative'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'NEGATIVE'] = 0
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Moderate'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Trace'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'positive'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Positive'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '100'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '5.5'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '250'] = 1
-DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose.str.contains('mg/dl', na=False)] = 1
+# DF_ORD2.loc[DF_ORD2.loc.contains(r'[Nn]egative') == True] = 0
 
-DF_ORD2.lab_ua_protein = DF_ORD2.lab_ua_protein.str.strip()
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Not Performed'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'negative'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'negarive'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Negative'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'NEGATIVE'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'neg'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Neg'] = 0
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'positive'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Positive'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'trace'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'traace'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Trace'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'TRACE'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '6.0'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '100'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '30'] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('mg/dl', na=False)] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('mg/dL', na=False)] = 1
-DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('300', na=False)] = 1
+if 'lab_ua_blood' in DF_ORD2:
+    DF_ORD2.lab_ua_blood = DF_ORD2.lab_ua_blood.str.strip() #strip any leading and trailing whitespace
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Not Performed'] = ''
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'None'] = 0
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'negative'] = 0
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Negative'] = 0
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'NEGATIVE'] = 0
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'neg'] = 0
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'small'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'SMALL'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysed'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-lysd'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'tace-lysed'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Trace-intact'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'trace-intact'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'TRACE-INTACT'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'moderate'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'Moderate'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood == 'large'] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood.str.contains('RBC/uL', na=False)] = 1
+    DF_ORD2.lab_ua_blood.loc[DF_ORD2.lab_ua_blood.str.contains('rbc/ul', na=False)] = 1
 
-DF_ORD2.lab_pregnant_rslt = DF_ORD2.lab_pregnant_rslt.str.strip()
-DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Not Performed'] = 0
-DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Negative'] = 0
-DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Positive'] = 1
+if 'lab_ua_glucose' in DF_ORD2:
+    DF_ORD2.lab_ua_glucose = DF_ORD2.lab_ua_glucose.str.strip()
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Not Performed'] = ''
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'None'] = ''
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negative'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negatie'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'negatve'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'neg'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'eneg'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Negative'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'NEGATIVE'] = 0
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Moderate'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Trace'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'positive'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == 'Positive'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '100'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '5.5'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose == '250'] = 1
+    DF_ORD2.lab_ua_glucose.loc[DF_ORD2.lab_ua_glucose.str.contains('mg/dl', na=False)] = 1
 
-DF_ORD2.lab_hbcab = DF_ORD2.lab_hbcab.str.strip()
-DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'Not Performed'] = 0
-DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'NON-REACTIVE'] = 0
-DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'REACTIVE'] = 1
-DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'BORDERLINE'] = 2
+if 'lab_ua_protein' in DF_ORD2:
+    DF_ORD2.lab_ua_protein = DF_ORD2.lab_ua_protein.str.strip()
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Not Performed'] = ''
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'None'] = ''
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'negative'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'negarive'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Negative'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'NEGATIVE'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'neg'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Neg'] = 0
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'positive'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Positive'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'trace'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'traace'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'Trace'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == 'TRACE'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '6.0'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '100'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein == '30'] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('mg', na=False)] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('mg/dl', na=False)] = 1
+    DF_ORD2.lab_ua_protein.loc[DF_ORD2.lab_ua_protein.str.contains('300', na=False)] = 1
 
-DF_ORD2.lab_hbsab = DF_ORD2.lab_hbsab.str.strip()
-DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'Not Performed'] = 0
-DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'NON-REACTIVE'] = 0
-DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'REACTIVE'] = 1
-DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'BORDERLINE'] = 2
+if 'lab_pregnant_rslt' in DF_ORD2:
+    DF_ORD2.lab_pregnant_rslt = DF_ORD2.lab_pregnant_rslt.str.strip()
+    DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Not Performed'] = ''
+    DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Negative'] = 0
+    DF_ORD2.lab_pregnant_rslt.loc[DF_ORD2.lab_pregnant_rslt == 'Positive'] = 1
 
-DF_ORD2.lab_hbsag = DF_ORD2.lab_hbsag.str.strip()
-DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'Not Performed'] = 0
-DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'NON-REACTIVE'] = 0
-DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'REACTIVE'] = 1
-DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'BORDERLINE'] = 2
-                     
-DF_ORD2.lab_syphilis_rslts = DF_ORD2.lab_syphilis_rslts.str.strip()
-DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'NON-REACTIVE'] = 0
-DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'REACTIVE'] = 1
+if 'lab_hbcab' in DF_ORD2:
+    DF_ORD2.lab_hbcab = DF_ORD2.lab_hbcab.str.strip()
+    DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'Not Performed'] = ''
+    DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'NON-REACTIVE'] = 0
+    DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'REACTIVE'] = 1
+    DF_ORD2.lab_hbcab.loc[DF_ORD2.lab_hbcab == 'BORDERLINE'] = 2
 
-DF_ORD2.lab_hematocrit = DF_ORD2.lab_hematocrit.str.strip()
-DF_ORD2.lab_hemoglobin = DF_ORD2.lab_hemoglobin.str.strip()
-DF_ORD2.lab_mcv = DF_ORD2.lab_mcv.str.strip()
-DF_ORD2.lab_platelet = DF_ORD2.lab_platelet.str.strip()
-DF_ORD2.lab_rdw = DF_ORD2.lab_rdw.str.strip()
-DF_ORD2.lab_hematocrit.loc[DF_ORD2.lab_hematocrit == 'Not Performed'] = 0
-DF_ORD2.lab_hemoglobin.loc[DF_ORD2.lab_hemoglobin == 'Not Performed'] = 0
-DF_ORD2.lab_mcv.loc[DF_ORD2.lab_mcv == 'Not Performed'] = 0
-DF_ORD2.lab_platelet.loc[DF_ORD2.lab_platelet == 'Not Performed'] = 0
-DF_ORD2.lab_rdw.loc[DF_ORD2.lab_rdw == 'Not Performed'] = 0
-DF_ORD2.lab_wbc.loc[DF_ORD2.lab_wbc == 'TNP'] = ''
+if 'lab_hbsab' in DF_ORD2:
+    DF_ORD2.lab_hbsab = DF_ORD2.lab_hbsab.str.strip()
+    DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'Not Performed'] = ''
+    DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'NON-REACTIVE'] = 0
+    DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'REACTIVE'] = 1
+    DF_ORD2.lab_hbsab.loc[DF_ORD2.lab_hbsab == 'BORDERLINE'] = 2
 
-DF_ORD2.vsd1_vision_both = '20/' + DF_ORD2.vsd1_vision_right
+if 'lab_hbsag' in DF_ORD2:
+    DF_ORD2.lab_hbsag = DF_ORD2.lab_hbsag.str.strip()
+    DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'Not Performed'] = ''
+    DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'NON-REACTIVE'] = 0
+    DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'REACTIVE'] = 1
+    DF_ORD2.lab_hbsag.loc[DF_ORD2.lab_hbsag == 'BORDERLINE'] = 2
+
+if 'lab_syphilis_rslts' in DF_ORD2:             
+    DF_ORD2.lab_syphilis_rslts = DF_ORD2.lab_syphilis_rslts.str.strip()
+    DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'NON-REACTIVE'] = 0
+    DF_ORD2.lab_syphilis_rslts.loc[DF_ORD2.lab_syphilis_rslts == 'REACTIVE'] = 1
+
+if 'lab_hematocrit' in DF_ORD2:
+    DF_ORD2.lab_hematocrit = DF_ORD2.lab_hematocrit.str.strip()
+    DF_ORD2.lab_hemoglobin = DF_ORD2.lab_hemoglobin.str.strip()
+    DF_ORD2.lab_mcv = DF_ORD2.lab_mcv.str.strip()
+    DF_ORD2.lab_platelet = DF_ORD2.lab_platelet.str.strip()
+    DF_ORD2.lab_rdw = DF_ORD2.lab_rdw.str.strip()
+    DF_ORD2.lab_hematocrit.loc[DF_ORD2.lab_hematocrit == 'Not Performed'] = ''
+    DF_ORD2.lab_hemoglobin.loc[DF_ORD2.lab_hemoglobin == 'Not Performed'] = ''
+    DF_ORD2.lab_mcv.loc[DF_ORD2.lab_mcv == 'Not Performed'] = ''
+    DF_ORD2.lab_platelet.loc[DF_ORD2.lab_platelet == 'Not Performed'] = ''
+    DF_ORD2.lab_rdw.loc[DF_ORD2.lab_rdw == 'Not Performed'] = ''
+    DF_ORD2.lab_wbc.loc[DF_ORD2.lab_wbc == 'TNP'] = ''
+
+if 'vsd1_vision_both' in DF_ORD2:
+    DF_ORD2.vsd1_vision_both = '20/' + DF_ORD2.vsd1_vision_right
 
 #%% - Merge both frames into DF_ORDERS and sort alphabetically
 DF_ORDERS = DF_ORD1.join(DF_ORD2, how='outer')
@@ -819,31 +846,38 @@ RESULT = RESULT.join(DF_MEDCIN, how='outer')
 RESULT = RESULT.join(DF_IMMUN, how='outer')
 
 #%% - Lab fields -- min/max value range
-RESULT.lab_platelet.loc[RESULT.lab_platelet >= 450.1] = ''
-RESULT.lab_platelet.loc[RESULT.lab_platelet <= 99.9] = ''
-RESULT.lab_hematocrit.loc[RESULT.lab_hematocrit >= 54.1] = ''
-RESULT.lab_hematocrit.loc[RESULT.lab_hematocrit <= 24.9] = ''
-RESULT.lab_hemoglobin.loc[RESULT.lab_hemoglobin >= 18.1] = ''                   
-RESULT.lab_hemoglobin.loc[RESULT.lab_hemoglobin <= 9.9] = ''
-RESULT.lab_cholesterol_rslt.loc[RESULT.lab_cholesterol_rslt >= 300.1] = ''
-RESULT.lab_cholesterol_rslt.loc[RESULT.lab_cholesterol_rslt <= 99.9] = ''             
-RESULT.lab_wbc.loc[RESULT.lab_wbc >= 14.1] = ''
-RESULT.lab_wbc.loc[RESULT.lab_wbc <= 2.9] = ''
-RESULT.lab_mcv.loc[RESULT.lab_mcv >= 100.1] = ''
-RESULT.lab_mcv.loc[RESULT.lab_mcv <= 49.9] = ''
-RESULT.lab_rdw.loc[RESULT.lab_rdw >= 20.1] = ''
-RESULT.lab_rdw.loc[RESULT.lab_rdw <= 10.9] = ''
+if 'lab_platelet' in RESULT:
+    RESULT.lab_platelet.loc[RESULT.lab_platelet >= 450.1] = ''
+    RESULT.lab_platelet.loc[RESULT.lab_platelet <= 99.9] = ''
+if 'lab_hematocrit' in RESULT:
+    RESULT.lab_hematocrit.loc[RESULT.lab_hematocrit >= 54.1] = ''
+    RESULT.lab_hematocrit.loc[RESULT.lab_hematocrit <= 24.9] = ''
+if 'lab_hemoglobin' in RESULT:
+    RESULT.lab_hemoglobin.loc[RESULT.lab_hemoglobin >= 18.1] = ''                   
+    RESULT.lab_hemoglobin.loc[RESULT.lab_hemoglobin <= 9.9] = ''
+if 'lab_cholesterol_rslt' in RESULT:
+    RESULT.lab_cholesterol_rslt.loc[RESULT.lab_cholesterol_rslt >= 300.1] = ''
+    RESULT.lab_cholesterol_rslt.loc[RESULT.lab_cholesterol_rslt <= 99.9] = ''
+if 'lab_wbc' in RESULT:
+    RESULT.lab_wbc.loc[RESULT.lab_wbc >= 14.1] = ''
+    RESULT.lab_wbc.loc[RESULT.lab_wbc <= 2.9] = ''
+if 'lab_mcv' in RESULT:
+    RESULT.lab_mcv.loc[RESULT.lab_mcv >= 100.1] = ''
+    RESULT.lab_mcv.loc[RESULT.lab_mcv <= 49.9] = ''
+if 'lab_rdw' in RESULT:
+    RESULT.lab_rdw.loc[RESULT.lab_rdw >= 20.1] = ''
+    RESULT.lab_rdw.loc[RESULT.lab_rdw <= 10.9] = ''
 
 #%% - Remove timestamps and NA values from Date fields
-RESULT['dov'] = pd.to_datetime(RESULT['dov'], errors='coerce')
 RESULT.us_arrival_date = pd.to_datetime(RESULT.us_arrival_date, errors='coerce')
 RESULT.date_of_birth = pd.to_datetime(RESULT.date_of_birth, errors='coerce')
 RESULT.date_of_birth = RESULT.date_of_birth.dt.date
-RESULT['dov'] = RESULT['dov'].dt.date
 RESULT.us_arrival_date = RESULT.us_arrival_date.dt.date
 
 #%% - drop records where alien_no or Patient # = N/A
 RESULT = RESULT[pd.notnull(RESULT['alien_no'])]
+RESULT = RESULT.set_index('alien_no', drop=False)
+RESULT = RESULT[RESULT.alien_no.str.contains('000') == False]
 
 #%% - reformat demographics fields
 RESULT.vsd1_height = RESULT.vsd1_height.round(2)
@@ -852,12 +886,9 @@ RESULT.vsd1_weight = RESULT.vsd1_weight.round(2)
 #%% - By the end of the file, all NA fields should be empty in order for REDcap to accept the data
 RESULT.fillna(value='', axis=1, inplace=True)
 
-#%% - Run this block to preview the finalized dataset (and make adjustments as necessary)
-RESULT
-
 #%% - Perform the upload operation - Step one: create csv for use in REDCap import
-path = ('')   # insert the directory where you would like the output file to be created
-RESULT.to_csv(path+'refHealthUpload_xxxx-xx-xx.csv', index=False, date_format='%Y-%m-%d')
+path = ('C:\\Users\\japese01\Documents\\RefugeeHealth\\uploads\\uploads\\'+dr+'\\')   # insert the directory where you would like the output file to be created
+RESULT.to_csv(path+'refHealthUpload_'+input_file_date+'.csv', index=False, date_format='%Y-%m-%d')
 
 #%% - Alternatively, perform upload in one step using REDCap API (requires error-less dataset)
 # REDCap import method will catch errors and allow you to make changes to the csv. 
